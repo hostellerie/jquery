@@ -1,338 +1,143 @@
-/*
- * Media Gallery - The ultimate gallery plugin for Geeklog
- * Copyright (C) 2003-2008  Mark R. Evans
- *
- * Licensed under the terms of the GNU General Public License:
- * 		http://www.opensource.org/licenses/gpl-license.php
- *
- * For further information visit:
- * 		http://www.gllabs.org
- *
- * "Support Open Source software. What about a donation today?"
- *
- * File Name: functions.js
- * 	This file provides the necessary JavaScript routines for the
- *  media browser FCKeditor plugin.
- *
- * File Authors:
- * 		Mark R. Evans (mark@gllabs.org)
- */
+/* MediaGallery autotag browser for the Geeklog Forum editor. */
+(function (window, document) {
+    'use strict';
 
+    function selectedValue(field) {
+        var fields = field && typeof field.length === 'number' ? field : [field];
+        var index;
+        for (index = 0; index < fields.length; index += 1) {
+            if (fields[index] && fields[index].checked) {
+                return fields[index].value;
+            }
+        }
+        return '';
+    }
 
+    function selectedMedia(form) {
+        return selectedValue(form.thumbnail);
+    }
 
-function insertImage(obj) {
-	imagehtml=makeHtmlForInsertion(obj);
-	if (imagehtml == false ) {
-		return false;
-	}
-	InsertHtml(imagehtml);
-	window.close();
-}
+    function positiveInteger(value, maximum) {
+        var number = parseInt(value, 10);
+        return isFinite(number) && number > 0 && number <= maximum ? number : 0;
+    }
 
-function makeHtmlForInsertion(obj){
-	var tag = '';
-	var autotag = '';
-	var width = '';
-	var border = '';
-	var alignment = '';
-	var source = '';
-	var link = '';
-	var autoplay = '';
-	var caption = '';
-	var aid = 0;
-	var thumbnail = '';
-	var mid = '';
-	var dest = '';
-	var alturl = '';
-	var lightbox = '';
+    function safeCaption(value) {
+        return String(value || '').replace(/[\[\]\r\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
 
-	// see which auto tag is selected...
-	for (i=0;i<obj.autotag.length;i++) {
-	    if ( obj.autotag[i].checked ) {
-	        autotag = obj.autotag[i].value;
-	    }
-	}
-	if ( autotag == '' ) {
-	    alert(lang.no_autotag);
-	    return false;
-	}
+    function addDimensions(tag, form) {
+        var width = positiveInteger(form.width.value, 2000);
+        var height = positiveInteger(form.height.value, 2000);
+        if (width) {
+            tag += ' width:' + width;
+        }
+        if (height) {
+            tag += ' height:' + height;
+        }
+        return tag;
+    }
 
-	width 	  = obj.width.value;
-	height    = obj.height.value;
-	border 	  = obj.border.value;
-	alignment = obj.alignment.value;
-	source 	  = obj.source.value;
-	link 	  = obj.link.value;
-	autoplay  = obj.autoplay.value;
-	caption   = obj.caption.value;
-	delay     = obj.delay.value;
-	aid 	  = obj.aid.value;
-	//alturl    = obj.alturl.value;
-	lightbox  = obj.lightbox.value;
-	if (obj.dest != undefined) {
-	    dest = obj.dest.value;
-	}
+    function addCommonOptions(tag, form, includeBorder, includeLink) {
+        if (includeBorder) {
+            tag += ' border:' + form.border.value;
+        }
+        tag += ' align:' + form.alignment.value;
+        if (form.source.value !== 'tn') {
+            tag += ' src:' + form.source.value;
+        }
+        if (includeLink && form.link.value !== '') {
+            tag += ' link:' + form.link.value;
+        }
+        if (form.dest && form.dest.value === 'block') {
+            tag += ' dest:block';
+        }
+        return tag;
+    }
 
-	switch ( autotag ) {
-	    case 'album' :
-	        if ( aid == '' ) {
-	            alert(lang.no_album);
-	            return false;
-	        }
-	        tag = "[" + autotag + ":" + aid;
-	        if ( width != '' && width > 0 ) {
-	            tag += " width:" + width;
-	        }
-	        if ( height != '' && height > 0 ) {
-	            tag += " height:" + height;
-	        }
-	        tag += " border:" + border;
-	        tag += " align:" + alignment;
-	        if ( source != 'tn') {
-	            tag += " src:" + source;
-	        }
-	        if ( link != '' ) {
-	            tag += " link:" + link;
-	        }
-	        if ( dest == 'block' ) {
-	            tag += " dest:block";
-	        }
-	        if ( alturl != '' ) {
-	            tag += " alt:" + alturl;
-	        }
-	        if ( caption != '' ) {
-	          tag += " " + caption;
-	        }
-	        tag += "]";
-	        break;
-	    case 'playall' :
-	        if ( aid == '' ) {
-	            alert(lang.no_album);
-	            return false;
-	        }
-	        tag = "[" + autotag + ":" + aid;
-	        if ( autoplay != '' ) {
-	        	tag += " autoplay:" + autoplay;
-	        }
-	        tag += " align:" + alignment;
-	        tag += "]";
-	        break;
-	    case 'slideshow' :
-	    case 'fslideshow' :
-	        if ( aid == '' ) {
-	            alert(lang.no_album);
-	            return false;
-	        }
-	        tag = "[" + autotag + ":" + aid;
-	        if ( width != '' && width > 0 ) {
-	            tag += " width:" + width;
-	        }
-	        if ( height != '' && height > 0 ) {
-	            tag += " height:" + height;
-	        }
-	        if ( delay != '' ) {
-	            tag += " delay:" + delay;
-	        }
-	        tag += " border:" + border;
-	        tag += " align:" + alignment;
-	        if ( source != 'tn') {
-	            tag += " src:" + source;
-	        }
-	        if ( link != '' ) {
-	            tag += " link:" + link;
-	        }
-	        if ( dest == 'block' ) {
-	            tag += " dest:block";
-	        }
-	        if ( caption != '' ) {
-	          tag += " " + caption;
-	        }
-	        tag += "]";
-	        break;
-	    case 'media' :
-	    case 'mlink' :
-	    	// find the selected media id...
-	    	if ( obj.thumbnail.length == null ) {
-		    	if ( obj.thumbnail.checked ) {
-			    	mid = obj.thumbnail.value;
-		    	}
-	    	} else {
-				for (i=0;i<obj.thumbnail.length;i++) {
-				    if ( obj.thumbnail[i].checked ) {
-				        mid = obj.thumbnail[i].value;
-				    }
-				}
-			}
-			if ( mid == '' ) {
-			    alert(lang.no_media);
-			    return false;
-			}
-	    	tag = "[" + autotag + ":" + mid;
-	        if ( width != '' && width > 0 ) {
-	            tag += " width:" + width;
-	        }
-	        if ( height != '' && height > 0 ) {
-	            tag += " height:" + height;
-	        }
-	        tag += " border:" + border;
-	        tag += " align:" + alignment;
-	        if ( source != 'tn') {
-	            tag += " src:" + source;
-	        }
-	        if ( autotag == 'media' && lightbox == '1' ) {
-	            tag += " link:2";
-		    } else if ( link != '' ) {
-		        tag += " link:" + link;
-		    }
-	        if ( dest == 'block' ) {
-	            tag += " dest:block";
-	        }
-	        if ( alturl != '' ) {
-	            tag += " alt:" + alturl;
-	        }
-	        if ( caption != '' ) {
-	          tag += " " + caption;
-	        }
-	        tag += "]";
-	        break;
-	    case 'img' :
-	    	// find the selected media id...
-	    	if ( obj.thumbnail.length == null ) {
-		    	if ( obj.thumbnail.checked ) {
-			    	mid = obj.thumbnail.value;
-		    	}
-	    	} else {
-				for (i=0;i<obj.thumbnail.length;i++) {
-				    if ( obj.thumbnail[i].checked ) {
-				        mid = obj.thumbnail[i].value;
-				    }
-				}
-			}
-			if ( mid == '' ) {
-			    alert(lang.no_media);
-			    return false;
-			}
+    function makeHtmlForInsertion(form) {
+        var autotag = selectedValue(form.autotag);
+        var albumId = positiveInteger(form.aid.value, 2147483647);
+        var mediaId;
+        var caption = safeCaption(form.caption.value);
+        var tag;
+        var delay;
 
-	    	tag = "[" + autotag + ":" + mid;
-	        if ( width != '' && width > 0 ) {
-	            tag += " width:" + width;
-	        }
-	        if ( height != '' && height > 0 ) {
-	            tag += " height:" + height;
-	        }
-	        tag += " align:" + alignment;
-	        if ( source != 'tn') {
-	            tag += " src:" + source;
-	        }
-	        if ( lightbox == '1' ) {
-	            tag += " link:2";
-	        } else if ( link != '' ) {
-	            tag += " link:" + link;
-	        }
-	        if ( dest == 'block' ) {
-	            tag += " dest:block";
-	        }
-	        if ( alturl != '' ) {
-	            tag += " alt:" + alturl;
-	        }
-	        tag += "]";
-	        break;
-	    case 'video' :
-	    	// find the selected media id...
-	    	if ( obj.thumbnail.length == null ) {
-		    	if ( obj.thumbnail.checked ) {
-			    	mid = obj.thumbnail.value;
-		    	}
-	    	} else {
-				for (i=0;i<obj.thumbnail.length;i++) {
-				    if ( obj.thumbnail[i].checked ) {
-				        mid = obj.thumbnail[i].value;
-				    }
-				}
-			}
-			if ( mid == '' ) {
-			    alert(lang.no_media);
-			    return false;
-			}
+        if (!autotag) {
+            window.alert(lang.no_autotag);
+            return false;
+        }
 
-	    	tag = "[" + autotag + ":" + mid;
-	        if ( width != '' && width > 0 ) {
-	            tag += " width:" + width;
-	        }
-	        if ( height != '' && height > 0 ) {
-	            tag += " height:" + height;
-	        }
-	        tag += " border:" + border;
-	        tag += " align:" + alignment;
-	        if ( source != 'tn') {
-	            tag += " src:" + source;
-	        }
-	        if ( autoplay != '' ) {
-	        	tag += " autoplay:" + autoplay;
-	        }
-	        if ( dest == 'block' ) {
-	            tag += " dest:block";
-	        }
-	        if ( caption != '' ) {
-	          tag += " " + caption;
-	        }
-	        tag += "]";
-	        break;
+        if (autotag === 'album' || autotag === 'slideshow' || autotag === 'fslideshow' || autotag === 'playall') {
+            if (!albumId) {
+                window.alert(lang.no_album);
+                return false;
+            }
+            tag = '[' + autotag + ':' + albumId;
+        } else {
+            mediaId = selectedMedia(form);
+            if (!mediaId) {
+                window.alert(lang.no_media);
+                return false;
+            }
+            tag = '[' + autotag + ':' + mediaId;
+        }
 
-	    case 'audio' :
-	    	// find the selected media id...
-	    	if ( obj.thumbnail.length == null ) {
-		    	if ( obj.thumbnail.checked ) {
-			    	mid = obj.thumbnail.value;
-		    	}
-	    	} else {
-				for (i=0;i<obj.thumbnail.length;i++) {
-				    if ( obj.thumbnail[i].checked ) {
-				        mid = obj.thumbnail[i].value;
-				    }
-				}
-			}
-			if ( mid == '' ) {
-			    alert(lang.no_media);
-			    return false;
-			}
+        if (autotag === 'playall') {
+            return tag + ' autoplay:' + form.autoplay.value + ' align:' + form.alignment.value + ']';
+        }
 
-	    	tag = "[" + autotag + ":" + mid;
-	        if ( width != '' && width > 0 ) {
-	            tag += " width:" + width;
-	        }
-	        if ( height != '' && height > 0 ) {
-	            tag += " height:" + height;
-	        }
-	        tag += " border:" + border;
-	        tag += " align:" + alignment;
-	        if ( source != 'tn') {
-	            tag += " src:" + source;
-	        }
-	        if ( autoplay != '' ) {
-	        	tag += " autoplay:" + autoplay;
-	        }
-	        if ( dest == 'block' ) {
-	            tag += " dest:block";
-	        }
-	        if ( caption != '' ) {
-	          tag += " " + caption;
-	        }
-	        tag += "]";
-	        break;
-	    case 'playall' :
-	        if ( aid == '' ) {
-	            alert(lang.no_album);
-	            return false;
-	        }
-	        tag = "[" + autotag + ":" + aid;
-	        if ( autoplay != '' ) {
-	        	tag += " autoplay:" + autoplay;
-	        }
-	        tag += " align:" + alignment;
-	        tag += "]";
-	        break;
+        tag = addDimensions(tag, form);
+        if (autotag === 'slideshow' || autotag === 'fslideshow') {
+            delay = positiveInteger(form.delay.value, 999);
+            if (delay) {
+                tag += ' delay:' + delay;
+            }
+        }
 
-	}
-	return tag;
-}
+        tag = addCommonOptions(tag, form, autotag !== 'img' && autotag !== 'mlink',
+            autotag !== 'video' && autotag !== 'audio' && autotag !== 'mlink');
+
+        if ((autotag === 'media' || autotag === 'img') && form.lightbox.value === '1') {
+            tag = tag.replace(/ link:[01]/, '') + ' link:2';
+        }
+        if (autotag === 'video' || autotag === 'audio') {
+            tag += ' autoplay:' + form.autoplay.value;
+        }
+        if (caption && autotag !== 'img' && autotag !== 'video' && autotag !== 'audio') {
+            tag += ' ' + caption;
+        }
+        return tag + ']';
+    }
+
+    window.insertImage = function (form) {
+        var autotag = makeHtmlForInsertion(form);
+        if (autotag === false) {
+            return false;
+        }
+        if (typeof window.InsertHtml === 'function') {
+            window.InsertHtml(autotag);
+            window.close();
+        }
+        return false;
+    };
+
+    window.dodisabled = function () {
+        var form = document.forms.mediabrowser;
+        var autotag;
+        var mediaTag;
+        if (!form) {
+            return;
+        }
+        autotag = selectedValue(form.autotag);
+        mediaTag = autotag === 'media' || autotag === 'img';
+        form.autoplay.disabled = autotag !== 'video' && autotag !== 'audio' && autotag !== 'playall';
+        form.border.disabled = autotag === 'img' || autotag === 'mlink' || autotag === 'fslideshow' || autotag === 'playall';
+        form.alignment.disabled = autotag === 'mlink';
+        form.source.disabled = autotag === 'mlink' || autotag === 'video' || autotag === 'audio' || autotag === 'playall';
+        form.link.disabled = autotag === 'mlink' || autotag === 'video' || autotag === 'audio' || autotag === 'playall';
+        form.caption.disabled = autotag === 'img' || autotag === 'video' || autotag === 'audio' || autotag === 'playall';
+        form.delay.disabled = autotag !== 'slideshow' && autotag !== 'fslideshow';
+        form.lightbox.disabled = !mediaTag;
+    };
+}(window, document));

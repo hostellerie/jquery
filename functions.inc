@@ -1,431 +1,263 @@
 <?php
 
 /* Reminder: always indent with 4 spaces (no tabs). */
-// +---------------------------------------------------------------------------+
-// | jQuery Plugin 1.4.1                                                       |
-// +---------------------------------------------------------------------------+
-// | functions.inc                                                             |
-// |                                                                           |
-// | This file does two things: 1) it implements the necessary Geeklog Plugin  |
-// | API methods and 2) implements all the common code needed by this plugin.  |
-// +---------------------------------------------------------------------------+
-// | Copyright (C) 2010 by the following authors:                              |
-// |                                                                           |
-// | Authors: ::Ben - cordiste AT free DOT fr                                  |
-// +---------------------------------------------------------------------------+
-// | Created with the Geeklog Plugin Toolkit.                                  |
-// +---------------------------------------------------------------------------+
-// |                                                                           |
-// | This program is free software; you can redistribute it and/or             |
-// | modify it under the terms of the GNU General Public License               |
-// | as published by the Free Software Foundation; either version 2            |
-// | of the License, or (at your option) any later version.                    |
-// |                                                                           |
-// | This program is distributed in the hope that it will be useful,           |
-// | but WITHOUT ANY WARRANTY; without even the implied warranty of            |
-// | MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             |
-// | GNU General Public License for more details.                              |
-// |                                                                           |
-// | You should have received a copy of the GNU General Public License         |
-// | along with this program; if not, write to the Free Software Foundation,   |
-// | Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.           |
-// |                                                                           |
-// +---------------------------------------------------------------------------+
 
 /**
-* @package jQuery
-*/
+ * Compatibility plugin for legacy [lightbox:] autotags and the MediaGallery
+ * browser used by the Forum editor.
+ *
+ * Copyright (C) 2010-2026 ::Ben
+ * Distributed under the GNU General Public License, version 2 or later.
+ *
+ * @package jQuery
+ */
 
 if (strpos(strtolower($_SERVER['PHP_SELF']), 'functions.inc') !== false) {
-    die ('This file can not be used on its own.');
+    die('This file can not be used on its own.');
 }
 
-/**
-* Language file include
-*/
 $plugin_path = $_CONF['path'] . 'plugins/jquery/';
 $langfile = $plugin_path . 'language/' . $_CONF['language'] . '.php';
-
 if (file_exists($langfile)) {
     require_once $langfile;
 } else {
     require_once $plugin_path . 'language/english.php';
 }
 
-/**
-* Load our config
-*/
-require_once $_CONF['path_system'].'classes/config.class.php';
+require_once $_CONF['path_system'] . 'classes/config.class.php';
 $c = config::get_instance();
 $_JQ_CONF = $c->get_config('jquery');
 
-// +---------------------------------------------------------------------------+
-// | Geeklog Plugin API Implementation                                         |
-// +---------------------------------------------------------------------------+
-
-if (!COM_isAnonUser()) {
-    $_SESSION['UseCKFinder'] = true;
-}
-
+/**
+ * Adds the MediaGallery browser button only where Forum 2.9.x provides the
+ * expected editor field. Geeklog remains responsible for loading jQuery.
+ */
 function plugin_getheadercode_jquery()
 {
-    global $_CONF, $_JQ_CONF, $LANG_JQUERY_FEEDBACK, $_SCRIPTS, $_PLUGINS, $LANG_JQUERY_1;
-    
+    global $_CONF, $_PLUGINS, $_SCRIPTS, $LANG_JQUERY_1;
+
+    if (!in_array('mediagallery', $_PLUGINS, true)
+        || !in_array('forum', $_PLUGINS, true)
+        || stripos(COM_getCurrentURL(), '/forum/createtopic.php') === false
+    ) {
+        return;
+    }
+
     $_SCRIPTS->setJavaScriptLibrary('jquery');
-    
-    //migrate plugin
-     if (SEC_hasRights('jquery.admin')) $_SCRIPTS->setJavaScriptFile('migrate', '/jquery/js/jquery-migrate-1.2.1.js');
-    
-    $str = LB . LB . '<!-- Begin jquery plugin -->' . LB;
-
-    // Feedback
-    if($_JQ_CONF['use_feedback'] == true){
-        $strext = '/jquery/feedback/jquery.validate.pack.js';
-        $_SCRIPTS->setJavaScriptFile('jquery_validate', $strext);
-        $strext = '/jquery/feedback/jquery.contactable.php';
-        $_SCRIPTS->setJavaScriptFile('jquery_contactable', $strext);
-        $css = '/jquery/feedback/contactable.css';
-        $_SCRIPTS->setCSSFile('jquery_contactable_css', $css, true);
-        $str .= '   jQuery(function(){' . LB;
-        $str .= '       jQuery(\'#contact\').contactable({' . LB;
-        $str .= '	    subject: \'' . $LANG_JQUERY_FEEDBACK['feedback'] . '\'' . LB;
-        $str .= '       });' . LB;
-        $str .= '   });' . LB;
-    }
-    
-    //mg browser for forum
-    if(in_array('mediagallery', $_PLUGINS) && in_array('forum', $_PLUGINS) && stripos(COM_getCurrentURL(), 'createtopic.php') !== FALSE){
-        //Forum 2.9.1
-        $str .= '    jQuery(document).ready(function() {' . LB;
-        $str .= '        jQuery(\'#form-forum-text\').after(\'<p>&nbsp;<a id="mg_browser" href="#">' . $LANG_JQUERY_1['add_mg_tag'] . '</a></p>\');' . LB;
-        $str .= '    });' . LB;
-        
-        $str .= 'jQuery(function () {' . LB;
-        $str .= '    jQuery(\'a#mg_browser\').click(function(){' . LB;
-        $str .= '        window.open(\'' . $_CONF['site_url'] . '/jquery/mgbrowser/mediagallery.php\', \'mediagallery\', \'width=600,height=650,resizable=yes,scrollbars=yes,scrolling=yes,location=no,toolbar=no\');' . LB;
-        $str .= '        return false;' . LB;
-        $str .= '    });' . LB;
-        $str .= '});' . LB;
-        
-    }
-    
-    $str .= '<!-- End jquery plugin includes -->' . LB;
-    
-    $_SCRIPTS->setJavaScript($str, true);
-    
-    return;
+    $browserUrl = $_CONF['site_url'] . '/jquery/mgbrowser/mediagallery.php';
+    $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+    $browserUrlJson = json_encode($browserUrl, $jsonFlags);
+    $labelJson = json_encode($LANG_JQUERY_1['add_mg_tag'], $jsonFlags);
+    $script = 'jQuery(function ($) {'
+        . 'var field=$("#form-forum-text");'
+        . 'if(!field.length||$("#mg_browser").length){return;}'
+        . 'var link=$("<a>",{id:"mg_browser",href:' . $browserUrlJson . ',text:' . $labelJson . '});'
+        . 'link.on("click",function(event){event.preventDefault();'
+        . 'window.open(this.href,"mediagallery","width=760,height=720,resizable=yes,scrollbars=yes");});'
+        . 'field.after($("<p>").append(link));'
+        . '});';
+    $_SCRIPTS->setJavaScript($script, true);
 }
 
-function JQUERY_getheadercode () {
-    
-    global $_CONF, $_JQ_CONF, $_SCRIPTS;
-    
-    //Define the blogurl
-    $str = '    var theblogurl ="'. $_CONF['site_url'] .'";' . LB;
-    // Lightbox
-    if($_JQ_CONF['use_lightbox'] == true){
-        $strext = '/jquery/js/jquery.lightbox-0.5.1.js';
-        $_SCRIPTS->setJavaScriptFile('jquery_lightbox', $strext);
-        $css = '/jquery/css/jquery.lightbox-0.5.css';
-        $_SCRIPTS->setCSSFile('jquery_lightbox_css', $css, true);
-        $str .= '    jQuery(document).ready(function() {' . LB;
-        $str .= '    jQuery(\'a.lightbox\').lightBox()' . LB;
-        $str .= '    });' . LB;
+function JQUERY_loadLightboxResources()
+{
+    global $_SCRIPTS;
+
+    static $loaded = false;
+    if (!$loaded) {
+        $_SCRIPTS->setJavaScriptFile('jquery_legacy_lightbox', '/jquery/js/lightbox.js');
+        $_SCRIPTS->setCSSFile('jquery_legacy_lightbox', '/jquery/css/lightbox.css', true);
+        $loaded = true;
     }
-    
-    $_SCRIPTS->setJavaScript($str, true);
-    
-    return;
 }
 
-/**
-* Implements a [lightbox:] autotag.
-*
-* @param    string  $op         operation to perform
-* @param    string  $content    item (e.g. story text), including the autotag
-* @param    array   $autotag    parameters used in the autotag
-* @param    mixed               tag names (for $op='tagname') or formatted content
-*
-*/
+function JQUERY_validateImageUrl($url)
+{
+    $url = trim((string) $url);
+    if ($url === '' || preg_match('/[\x00-\x1F\x7F]/', $url)) {
+        return '';
+    }
+    if (strpos($url, '/') === 0 && strpos($url, '//') !== 0) {
+        return $url;
+    }
+    $parts = parse_url($url);
+    if ($parts === false || empty($parts['scheme']) || empty($parts['host'])) {
+        return '';
+    }
+    $scheme = strtolower($parts['scheme']);
+    return ($scheme === 'http' || $scheme === 'https') ? $url : '';
+}
+
+function JQUERY_normalizeDimension($value, $fallback)
+{
+    $value = strtolower(trim((string) $value));
+    if ($value === 'auto') {
+        return 'auto';
+    }
+    if (ctype_digit($value)) {
+        $number = (int) $value;
+        if ($number >= 1 && $number <= 2000) {
+            return (string) $number;
+        }
+    }
+    return (string) $fallback;
+}
 
 function plugin_autotags_jquery($op, $content = '', $autotag = '')
 {
-    global $_CONF, $LANG_JQUERY_1;
-    
-    $lightbox = '';
+    global $_JQ_CONF, $LANG_JQUERY_1;
 
-    if ($op == 'tagname') {
+    if ($op === 'tagname') {
         return 'lightbox';
-        break;
-    } else if ($op == 'description') {
-        return array (
-        'lightbox' => $LANG_JQUERY_1['autotag_desc_lightbox']
-        );
-    } elseif ($op == 'parse') {
-        JQUERY_getheadercode ();
-        $picture_url = COM_applyFilter($autotag['parm1']);
-        //Thumbnail dimension idea from Ivy and Hiroron
-        $width = '75'; 
-        $height = '75';   
-
-        if (!empty ($autotag['parm2'])) {
-            $skip = 0;
-            $px = explode (' ', trim ($autotag['parm2']));
-            if (is_array ($px)) {
-                foreach ($px as $part) {
-                    if (substr ($part, 0, 6) == 'width:') {
-                        $a = explode (':', $part);
-                        $a = strtolower ($a[1]);
-                        $width = $a;
-                        $skip++;
-                    } else if (substr ($part, 0, 7) == 'height:') {
-                        $b = explode (':', $part);
-                        $b = strtolower ($b[1]);
-                        $height = $b;
-                        $skip++;
-                    } else {
-                        break;
-                    }
-                }
-                if ($skip == 0) {
-                    $title = trim ($autotag['parm2']);
-                } else {
-                    if (count ($px) > $skip) {
-                        for ($i = 0; $i < $skip; $i++) {
-                            array_shift ($px);
-                        }
-                        $title = trim (implode (' ', $px));
-                    }
-                }
-            } else {
-                $title = trim ($autotag['parm2']);
-            }
-        }
-
-        // <20110830> hiroron  my Site Image file Check
-        $picture_exists = FALSE;
-
-        // check outsite url
-        if (strpos($autotag['parm1'], 'http')===0 && strpos($autotag['parm1'], $_CONF['site_url']) === FALSE ) {
-            // outsite url
-            $picture_exists = TRUE;
-
-        } else {
-            // my site url
-            $temp_path = $autotag['parm1'];
-            if (strpos($autotag['parm1'], $_CONF['site_url']) !== FALSE) {
-                // cut my site url
-                $temp_path = str_replace($_CONF['site_url'], '', $autotag['parm1']);
-            }
-            $picture_path = $_CONF['path_html'] . $temp_path;
-            if (is_file($picture_path)) {
-                $picture_exists = TRUE;
-                $size = 1;
-            }
-        }
-        if (!empty($picture_url) && $picture_exists) {
-            // </20110830> hiroron  my Site Image file Check
-            if ($width == 'auto' ) {
-                $imgwidth = '';
-            } else {
-                $imgwidth = '&amp;w=' . $width;
-            }
-            if ($height == 'auto') {
-                $imgheight = '';
-            } else {
-                $imgheight = '&amp;h=' . $height;
-            }
-
-            if ($title != '') {
-                $lightbox .= LB . '<a class="lightbox" href="'. $autotag['parm1'] . '" alt="' . $title . '"><img style="width:0px; height:0px; margin:0; padding:0" alt="" />' . $title . '</a>';
-            } else {
-                $lightbox .= LB . '<a class="lightbox" href="'. $autotag['parm1'] . '" alt="' . $title . '"><img class="lightbox" style="background:#FFFFFF; padding:5px; border:1px solid #CCC;" src="' . $_CONF['site_url'] . '/jquery/timthumb.php?src=' . $autotag['parm1'] . $imgwidth . $imgheight . '&amp;zc=1&amp;q=100" alt="' . $title . '" title="' . $title . '" /></a>';
-            }
-        }
-        $content = str_replace($autotag['tagstr'], $lightbox, $content);
+    }
+    if ($op === 'description') {
+        return array('lightbox' => $LANG_JQUERY_1['autotag_desc_lightbox']);
+    }
+    if ($op !== 'parse' || !is_array($autotag) || !isset($autotag['tagstr'])) {
+        return $content;
+    }
+    if (isset($_JQ_CONF['use_lightbox']) && empty($_JQ_CONF['use_lightbox'])) {
+        return str_replace($autotag['tagstr'], '', $content);
     }
 
-    return $content;
+    $url = JQUERY_validateImageUrl(isset($autotag['parm1']) ? $autotag['parm1'] : '');
+    if ($url === '') {
+        return str_replace($autotag['tagstr'], '', $content);
+    }
+
+    $defaultWidth = isset($_JQ_CONF['lightbox_width'])
+        ? JQUERY_normalizeDimension($_JQ_CONF['lightbox_width'], 75) : '75';
+    $defaultHeight = isset($_JQ_CONF['lightbox_height'])
+        ? JQUERY_normalizeDimension($_JQ_CONF['lightbox_height'], 75) : '75';
+    $parameters = isset($autotag['parm2']) ? trim($autotag['parm2']) : '';
+    $width = $defaultWidth;
+    $height = $defaultHeight;
+
+    if (preg_match('/(?:^|\s)width:(auto|\d{1,5})(?=\s|$)/i', $parameters, $match)) {
+        $width = JQUERY_normalizeDimension($match[1], 75);
+    }
+    if (preg_match('/(?:^|\s)height:(auto|\d{1,5})(?=\s|$)/i', $parameters, $match)) {
+        $height = JQUERY_normalizeDimension($match[1], 75);
+    }
+    $title = preg_replace('/(?:^|\s)(?:width|height):(?:auto|\d{1,5})(?=\s|$)/i', ' ', $parameters);
+    $title = trim(preg_replace('/\s+/', ' ', $title));
+
+    JQUERY_loadLightboxResources();
+    $escapedUrl = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+    $escapedTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+    $ariaLabel = $title !== '' ? $title : $LANG_JQUERY_1['open_image'];
+    $attributes = ' class="jquery-lightbox" href="' . $escapedUrl . '"'
+        . ' data-lightbox="legacy-content" aria-label="'
+        . htmlspecialchars($ariaLabel, ENT_QUOTES, 'UTF-8') . '"';
+
+    if ($title !== '') {
+        $replacement = '<a' . $attributes . '>' . $escapedTitle . '</a>';
+    } else {
+        $style = ($width !== 'auto' ? 'width:' . $width . 'px;' : '')
+            . ($height !== 'auto' ? 'height:' . $height . 'px;' : '');
+        $replacement = '<a' . $attributes . '><img class="jquery-lightbox__thumbnail"'
+            . ' src="' . $escapedUrl . '" alt="" loading="lazy" decoding="async"'
+            . ($style !== '' ? ' style="' . $style . '"' : '') . '></a>';
+    }
+
+    return str_replace($autotag['tagstr'], $replacement, $content);
 }
 
-
-/**
-* Return plugin entry for "Command and Control" (moderation.php)
-*
-* @return  array  Array containing (plugin name, admin url, url of plugin icon)
-*
-*/
 function plugin_cclabel_jquery()
 {
     global $_CONF, $LANG_JQUERY_1;
-
-    $retval = array();
-    if (SEC_hasRights('jquery.admin')) {
-        $retval = array($LANG_JQUERY_1['plugin_name'],
-        $_CONF['site_admin_url'] . '/plugins/jquery/index.php',
-        plugin_geticon_jquery());
+    if (!SEC_hasRights('jquery.admin')) {
+        return array();
     }
-
-    return $retval;
+    return array($LANG_JQUERY_1['plugin_name'], $_CONF['site_admin_url'] . '/plugins/jquery/index.php', plugin_geticon_jquery());
 }
 
-/**
-* Return plugin entry for the Admins Only block
-*
-* @return array Array containing (plugin name, plugin admin url, # of plugin items or '')
-*/
 function plugin_getadminoption_jquery()
 {
     global $_CONF, $LANG_JQUERY_1;
-
     if (SEC_hasRights('jquery.admin')) {
-        return array($LANG_JQUERY_1['plugin_name'],
-        $_CONF['site_admin_url'] . '/plugins/jquery/index.php', 0);
+        return array($LANG_JQUERY_1['plugin_name'], $_CONF['site_admin_url'] . '/plugins/jquery/index.php', 0);
     }
 }
 
-/**
-* Returns the URL of the plugin's icon
-*
-* @return   string      URL of the icon
-*
-*/
 function plugin_geticon_jquery()
 {
     global $_CONF;
-
     return $_CONF['site_admin_url'] . '/plugins/jquery/images/jquery.png';
 }
 
-/**
-* Returns the current plugin code version
-*
-* @return string    plugin version
-*/
 function plugin_chkVersion_jquery()
 {
     global $_CONF;
-
     require_once $_CONF['path'] . 'plugins/jquery/autoinstall.php';
-
-    $inst_parms = plugin_autoinstall_jquery('jquery');
-
-    return $inst_parms['info']['pi_version'];
+    $parameters = plugin_autoinstall_jquery('jquery');
+    return $parameters['info']['pi_version'];
 }
 
-/**
-* Returns doc uri for Geeklog-1.6.0 or later
-*/
-function plugin_getdocumentationurl_jquery() {
-    
-    return 'http://geeklog.fr/downloads/index.php/jquery';
+function plugin_getdocumentationurl_jquery()
+{
+    return 'https://github.com/hostellerie/jquery';
 }
 
-/**
-* Update the plugin
-*
-* @return   int     Number of message to display or true for success
-*
-*/
 function plugin_upgrade_jquery()
 {
     global $_CONF, $_TABLES;
 
-    $installed_version = DB_getItem($_TABLES['plugins'], 'pi_version',
-    "pi_name = 'jquery'");
-    $code_version = plugin_chkVersion_jquery();
-    if ($installed_version == $code_version) {
-        // nothing to do
+    $installedVersion = DB_getItem($_TABLES['plugins'], 'pi_version', "pi_name = 'jquery'");
+    $codeVersion = plugin_chkVersion_jquery();
+    if ($installedVersion === $codeVersion) {
         return true;
     }
-    require_once $_CONF['path'] . 'plugins/jquery/install_defaults.php';
-    require_once $_CONF['path_system'] . 'classes/config.class.php';
-    require_once $_CONF['path'] . 'plugins/jquery/autoinstall.php';
 
-    if (! plugin_compatible_with_this_version_jquery('jquery')) {
+    require_once $_CONF['path'] . 'plugins/jquery/install_defaults.php';
+    require_once $_CONF['path'] . 'plugins/jquery/autoinstall.php';
+    if (!plugin_compatible_with_this_version_jquery('jquery')) {
         return 3002;
     }
 
-    // other update code goes here
-    switch( $installed_version ) {
-        
-    case '1.0':
-        $c = config::get_instance();
-        $c->add('use_feedback', $_JQ_DEFAULT['use_feedback'],
-        'select', 0, 1, 3, 60, true, 'jquery');
-        $c->set('CND_url', 'http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js', 'jquery');
-
-    case '1.1':
-        $c = config::get_instance();
-        $c->add('use_codehighlighter', $_JQ_DEFAULT['use_codehighlighter'],
-        'select', 0, 1, 3, 70, true, 'jquery');
-
-    case '1.1.1':
-        $c = config::get_instance();
-        $c->add('use_ckeditor', $_JQ_DEFAULT['use_ckeditor'],
-        'select', 0, 1, 3, 80, true, 'jquery');
-        
-    case '1.2':
-        $c = config::get_instance();
-        
-        $c->del('use_CND', 'jquery');
-        $c->del('CND_url', 'jquery');
-        $c->del('fs_01', 'jquery');
-        $c->del('use_datepicker', 'jquery');
-        $c->del('use_colorpicker', 'jquery');
-        
-        $c->add('fs_03', NULL, 'fieldset', 0, 2, NULL, 100, true, 'jquery');
-        $c->add('lightbox_width', $_JQ_DEFAULT['lightbox_width'],
-        'text', 0, 2, 0, 110, true, 'jquery');
-        $c->add('lightbox_height', $_JQ_DEFAULT['lightbox_height'],
-        'text', 0, 2, 0, 120, true, 'jquery');
-
-    case '1.3.1':				
-    case '1.3.0':
-        $c = config::get_instance();
-        $c->del('use_ckeditor', 'jquery');			
-        $c->del('use_codehighlighter', 'jquery');
-        
-    case '1.4.0':
-    case '1.4.1':		
-
-        default :
-        // update plugin version number
-        $inst_parms = plugin_autoinstall_jquery('jquery');
-        $pi_gl_version = $inst_parms['info']['pi_gl_version'];
-        DB_query("UPDATE {$_TABLES['plugins']} SET pi_version = '$code_version', pi_gl_version = '$pi_gl_version' WHERE pi_name = 'jquery'");
-        COM_errorLog( "Updated jQuery plugin from v$installed_version to v$code_version", 1 );
+    $configuration = config::get_instance();
+    if (!$configuration->group_exists('jquery') && !plugin_initconfig_jquery()) {
+        return false;
     }
+    $current = $configuration->get_config('jquery');
+    $useLightbox = isset($current['use_lightbox']) ? (int) $current['use_lightbox'] : 1;
+    $lightboxWidth = isset($current['lightbox_width'])
+        ? JQUERY_normalizeDimension($current['lightbox_width'], 75) : '75';
+    $lightboxHeight = isset($current['lightbox_height'])
+        ? JQUERY_normalizeDimension($current['lightbox_height'], 75) : '75';
+    foreach (array('use_CND', 'CND_url', 'use_datepicker', 'use_colorpicker',
+        'use_feedback', 'use_codehighlighter', 'use_ckeditor', 'fs_01', 'fs_03',
+        'use_lightbox', 'lightbox_width', 'lightbox_height', 'fs_02') as $name) {
+        $configuration->del($name, 'jquery');
+    }
+    // Recreate retained settings to repair legacy configuration metadata while
+    // preserving this site's values in shared-files multisite installations.
+    $configuration->add('fs_02', null, 'fieldset', 0, 1, null, 0, true, 'jquery');
+    $configuration->add('use_lightbox', $useLightbox, 'select', 0, 1, 3, 30, true, 'jquery');
+    $configuration->add('lightbox_width', $lightboxWidth, 'text', 0, 1, null, 40, true, 'jquery');
+    $configuration->add('lightbox_height', $lightboxHeight, 'text', 0, 1, null, 50, true, 'jquery');
+
+    $parameters = plugin_autoinstall_jquery('jquery');
+    $safeVersion = DB_escapeString($codeVersion);
+    $safeGlVersion = DB_escapeString($parameters['info']['pi_gl_version']);
+    DB_query("UPDATE {$_TABLES['plugins']} SET pi_version = '{$safeVersion}', "
+        . "pi_gl_version = '{$safeGlVersion}' WHERE pi_name = 'jquery'");
+    if (DB_error()) {
+        return false;
+    }
+    COM_errorLog("Updated jQuery plugin from v{$installedVersion} to v{$codeVersion}", 1);
     return true;
 }
 
-/**
-* Automatic uninstall function for plugins
-*
-* This code is automatically uninstalling the plugin.
-* It passes an array to the core code function that removes
-* tables, groups, features and php blocks from the tables.
-* Additionally, this code can perform special actions that cannot be
-* foreseen by the core code (interactions with other plugins for example)
-*
-* @return   array   Plugin information
-*
-*/
 function plugin_autouninstall_jquery()
 {
-    $out = array (
-    /* give the name of the tables, without $_TABLES[] */
-    'tables' => array(/* e.g. 'jquery' */),
-    /* give the full name of the group, as in the db */
-    'groups' => array('jQuery Admin'),
-    /* give the full name of the feature, as in the db */
-    'features' => array('jquery.admin'),
-    /* give the full name of the block, including 'phpblock_', etc */
-    'php_blocks' => array(),
-    /* give all vars with their name */
-    'vars' => array()
+    return array(
+        'tables' => array(),
+        'groups' => array('jQuery Admin'),
+        'features' => array('jquery.admin'),
+        'php_blocks' => array(),
+        'vars' => array()
     );
-
-    return $out;
 }
+
 ?>

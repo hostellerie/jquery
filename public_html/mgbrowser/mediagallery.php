@@ -31,11 +31,8 @@
 //
 
 require_once '../../lib-common.php';
-require_once $_CONF['path'] . 'plugins/mediagallery/include/classMedia.php';
 
 $mb_base_path = '/jquery/mgbrowser';
-
-include_once $_CONF['path_html'] . $mb_base_path . '/config.php';
 
 $langfile = $_CONF['path_html'] . $mb_base_path . '/langs/' . $_CONF['language'] . '.php';
 
@@ -77,9 +74,9 @@ function MG_popupHeader($pagetitle = '') {
     } else {
         $pagetitle .= $_CONF['site_name'];
     }
-    $header->set_var('page_title',  $pagetitle);
+    $header->set_var('page_title',  htmlspecialchars($pagetitle, ENT_QUOTES, $charset));
     $header->set_var('site_url',    $_CONF['site_url']);
-    $header->set_var('site_name',   $_CONF['site_name']);
+    $header->set_var('site_name',   htmlspecialchars($_CONF['site_name'], ENT_QUOTES, $charset));
     $header->set_var('css_url',     $_CONF['site_url'] . $mb_base_path . '/css/style.css');
     $header->set_var('js_lang_url', $_CONF['site_url'] . $mb_base_path . '/langs/' . $jslangfile);
     $header->set_var('js_url',      $_CONF['site_url'] . $mb_base_path . '/jscripts/functions.js');
@@ -95,7 +92,7 @@ function MG_popupFooter() {
     return '</body></html>';
 }
 
-if (!in_array('mediagallery', $_PLUGINS)) {
+if (!in_array('mediagallery', $_PLUGINS, true)) {
     // The plugin is disabled
     $display = MG_popupHeader();
     $display .= COM_startBlock('Plugin disabled');
@@ -106,7 +103,12 @@ if (!in_array('mediagallery', $_PLUGINS)) {
     exit;
 }
 
-if ($_USER['uid'] < 2 && $_MG_CONF['loginrequired'] == 1) {
+require_once $_CONF['path'] . 'plugins/mediagallery/include/common.php';
+require_once $_CONF['path'] . 'plugins/mediagallery/include/classMedia.php';
+require_once $_CONF['path'] . 'plugins/mediagallery/include/classAlbum.php';
+include_once $_CONF['path_html'] . $mb_base_path . '/config.php';
+
+if ($_USER['uid'] < 2 && !empty($_MG_CONF['loginrequired'])) {
     $display = MG_popupHeader();
     $display .= 'Site Configuration requires that you login before using this feature.';
     $display .= MG_popupFooter();
@@ -118,16 +120,16 @@ if ($_USER['uid'] < 2 && $_MG_CONF['loginrequired'] == 1) {
 * Main Function
 */
 
-$album_id   = isset($_REQUEST['aid'])  ? COM_applyFilter($_REQUEST['aid'],true) : 0;
-$page       = isset($_REQUEST['page']) ? COM_applyFilter($_REQUEST['page'],true) : 1;
-$instance   = isset($_REQUEST['i'])    ? COM_applyFilter($_REQUEST['i']) : '';
+$album_id   = isset($_REQUEST['aid']) ? (int) COM_applyFilter($_REQUEST['aid'], true) : 0;
+$page       = isset($_REQUEST['page']) ? (int) COM_applyFilter($_REQUEST['page'], true) : 1;
+$instance   = isset($_REQUEST['i']) ? preg_replace('/[^a-zA-Z0-9_-]/', '', $_REQUEST['i']) : '';
 $navigation = isset($_POST['navigation']) ? COM_applyFilter($_POST['navigation']) : '';
-if ($navigation == 'next') $page++;
-if ($navigation == 'prev') $page--;
-
-//Mediagallery 1.7+
-require_once $_CONF['path'] . 'plugins/mediagallery/include/common.php';
-require_once $_CONF['path'] . 'plugins/mediagallery/include/classAlbum.php';
+if ($navigation === 'next') {
+    $page++;
+} elseif ($navigation === 'prev') {
+    $page--;
+}
+$page = max(1, $page);
 
 $root_album = new mgAlbum(0); // root album
 $album      = new mgAlbum($album_id); // current album
@@ -163,13 +165,13 @@ $page = $page - 1;
 
 $total_items_in_album = $album->media_count;
 
-$total_pages = ceil($total_items_in_album / $media_per_page);
+$total_pages = (int) ceil($total_items_in_album / $media_per_page);
 
-if ($page >= $total_pages) {
+if ($total_pages > 0 && $page >= $total_pages) {
     $page = 0;
 }
 if ($page < 0) {
-    $page = $total_pages - 1;
+    $page = max(0, $total_pages - 1);
 }
 
 $begin = $media_per_page * $page;
@@ -186,6 +188,7 @@ if ($album_id == 0) {
            if ($albums[$child]->access > 0) {
                $album_id = $albums[$child]->id;
 			   $total_items_in_album = $albums[$child]->media_count;
+               $album = $albums[$child];
                break;
            }
        }
@@ -215,6 +218,7 @@ $mediaObject = array();
 
 $MG_media = array();
 
+$sortOrder = 0;
 $orderBy = MG_getSortOrder($album_id, $sortOrder);
 
 $sql = "SELECT * FROM {$_TABLES['mg_media_albums']} AS ma INNER JOIN " . $_TABLES['mg_media'] . " AS m " .
@@ -260,10 +264,10 @@ if ($aOffset > 0) {
     $aPage = intval($aOffset / ($_MG_CONF['album_display_columns'] * $_MG_CONF['album_display_rows'])) + 1;
 }
 
-//$prev_disabled = ($current_print_page == 1) ? ' disabled' : '';
-//$next_disabled = ($current_print_page == $total_print_pages) ? ' disabled' : '';
+$prev_disabled = ($current_print_page <= 1) ? ' disabled' : '';
+$next_disabled = ($current_print_page >= $total_print_pages) ? ' disabled' : '';
 
-$birdseed = MG_getBirdseed($album_id, 0, $sortOrder, $page=0);
+$birdseed = MG_getBirdseed($album_id, 0, $sortOrder, 0);
 
 $refresh = (isset($_REQUEST['refresh']) ? COM_applyFilter($_REQUEST['refresh'],true) : 0);
 
@@ -292,42 +296,56 @@ if ($refresh != 1) {  // initial call
         'mediaon'               => ' checked',
     ));
 } else {
+    $post = array(
+        'border' => isset($_POST['border']) ? (int) $_POST['border'] : 0,
+        'alignment' => isset($_POST['alignment']) ? COM_applyFilter($_POST['alignment']) : 'none',
+        'width' => isset($_POST['width']) ? (int) $_POST['width'] : 0,
+        'height' => isset($_POST['height']) ? (int) $_POST['height'] : 0,
+        'delay' => isset($_POST['delay']) ? (int) $_POST['delay'] : (int) $_mgMB_CONF['at_delay'],
+        'source' => isset($_POST['source']) ? COM_applyFilter($_POST['source']) : 'tn',
+        'autoplay' => isset($_POST['autoplay']) ? (int) $_POST['autoplay'] : 0,
+        'link' => isset($_POST['link']) ? (int) $_POST['link'] : 0,
+        'lightbox' => isset($_POST['lightbox']) ? (int) $_POST['lightbox'] : 0,
+        'alturl' => isset($_POST['alturl']) ? (int) $_POST['alturl'] : 0,
+        'autotag' => isset($_POST['autotag']) ? COM_applyFilter($_POST['autotag']) : 'media',
+        'caption' => isset($_POST['caption']) ? strip_tags($_POST['caption']) : ''
+    );
     $T->set_var(array(
-        'border_yes'            => $_POST['border'] == 1 ? ' selected' : '',
-        'border_no'             => $_POST['border'] == 1 ? '' : ' selected',
-        'align_none'            => $_POST['alignment'] == 'none' ? ' selected' : '',
-        'align_auto'            => $_POST['alignment'] == 'auto' ? ' selected' : '',
-        'align_right'           => $_POST['alignment'] == 'right' ? ' selected' : '',
-        'align_left'            => $_POST['alignment'] == 'left' ? ' selected' : '',
-        'width'                 => $_POST['width'],
-        'height'                => $_POST['height'],
-        'delay'                 => (isset($_POST['delay']) ? $_POST['delay'] : $_mgMB_CONF['at_delay']),
-        'src_tn'                => $_POST['source'] == 'tn' ? ' selected' : '',
-        'src_disp'              => $_POST['source'] == 'disp' ? ' selected' : '',
-        'src_orig'              => $_POST['source'] == 'orig' ? ' selected' : '',
-        'autoplay_yes'          => $_POST['autoplay'] == 1 ? ' selected' : '',
-        'autoplay_no'           => $_POST['autoplay'] == 1 ? '' : ' selected',
-        'link_yes'              => $_POST['link'] == 1 ? ' selected' : '',
-        'link_no'               => $_POST['link'] == 0 ? ' selected' : '',
-        'lightbox_yes'          => $_POST['lightbox'] == 1 ? ' selected' : '',
-        'lightbox_no'           => $_POST['lightbox'] == 0 ? ' selected' : '',
-        'alturl_yes'            => $_POST['alturl'] == 1 ? ' selected' : '',
-        'alturl_no'             => $_POST['alturl'] == 1 ? '' : ' selected',
-        'albumon'               => $_POST['autotag'] == 'album' ? ' checked' : '',
-        'slideshowon'           => $_POST['autotag'] == 'slideshow' ? ' checked' : '',
-        'fslideshowon'          => $_POST['autotag'] == 'fslideshow' ? ' checked' : '',
-        'mediaon'               => $_POST['autotag'] == 'media' ? ' checked' : '',
-        'mlinkon'               => $_POST['autotag'] == 'mlink' ? ' checked' : '',
-        'imgon'                 => $_POST['autotag'] == 'img' ? ' checked' : '',
-        'videoon'               => $_POST['autotag'] == 'video' ? ' checked' : '',
-        'audioon'               => $_POST['autotag'] == 'audio' ? 'checked' : '',
-        'playallon'             => $_POST['autotag'] == 'playall' ? 'checked' : '',
-        'caption'               => $_POST['caption'],
+        'border_yes'            => $post['border'] === 1 ? ' selected' : '',
+        'border_no'             => $post['border'] === 1 ? '' : ' selected',
+        'align_none'            => $post['alignment'] === 'none' ? ' selected' : '',
+        'align_auto'            => $post['alignment'] === 'auto' ? ' selected' : '',
+        'align_right'           => $post['alignment'] === 'right' ? ' selected' : '',
+        'align_left'            => $post['alignment'] === 'left' ? ' selected' : '',
+        'width'                 => min(2000, max(0, $post['width'])),
+        'height'                => min(2000, max(0, $post['height'])),
+        'delay'                 => min(999, max(0, $post['delay'])),
+        'src_tn'                => $post['source'] === 'tn' ? ' selected' : '',
+        'src_disp'              => $post['source'] === 'disp' ? ' selected' : '',
+        'src_orig'              => $post['source'] === 'orig' ? ' selected' : '',
+        'autoplay_yes'          => $post['autoplay'] === 1 ? ' selected' : '',
+        'autoplay_no'           => $post['autoplay'] === 1 ? '' : ' selected',
+        'link_yes'              => $post['link'] === 1 ? ' selected' : '',
+        'link_no'               => $post['link'] === 0 ? ' selected' : '',
+        'lightbox_yes'          => $post['lightbox'] === 1 ? ' selected' : '',
+        'lightbox_no'           => $post['lightbox'] === 0 ? ' selected' : '',
+        'alturl_yes'            => $post['alturl'] === 1 ? ' selected' : '',
+        'alturl_no'             => $post['alturl'] === 1 ? '' : ' selected',
+        'albumon'               => $post['autotag'] === 'album' ? ' checked' : '',
+        'slideshowon'           => $post['autotag'] === 'slideshow' ? ' checked' : '',
+        'fslideshowon'          => $post['autotag'] === 'fslideshow' ? ' checked' : '',
+        'mediaon'               => $post['autotag'] === 'media' ? ' checked' : '',
+        'mlinkon'               => $post['autotag'] === 'mlink' ? ' checked' : '',
+        'imgon'                 => $post['autotag'] === 'img' ? ' checked' : '',
+        'videoon'               => $post['autotag'] === 'video' ? ' checked' : '',
+        'audioon'               => $post['autotag'] === 'audio' ? ' checked' : '',
+        'playallon'             => $post['autotag'] === 'playall' ? ' checked' : '',
+        'caption'               => htmlspecialchars($post['caption'], ENT_QUOTES, 'UTF-8'),
     ));
 }
 
 $T->set_var(array(
-    's_form_action'         => $_SERVER['PHP_SELF'],
+    's_form_action'         => htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'),
     'site_url'              => $_MG_CONF['site_url'],
     'birdseed'              => $birdseed,
     'album_title'           => PLG_replaceTags($album->title),
@@ -413,11 +431,11 @@ if ($total_media > 0) {
             $z = ($j+$start);
             $title = '';
             if (!empty($MG_media[$j]->title)) {
-                $title = '<p>' . strip_tags($MG_media[$j]->title) . '</p>';
+                $title = '<p>' . htmlspecialchars(strip_tags($MG_media[$j]->title), ENT_QUOTES, 'UTF-8') . '</p>';
             }
             $celldisplay = '<div class="thumb">' . $MG_media[$j]->displayRawThumb() . '</div>'
                          . '<div class="description">' . COM_truncate($title, 20,'...')
-                         . '</div><input type="radio" name="thumbnail" value="' . $MG_media[$j]->id . '">';
+                         . '</div><input type="radio" name="thumbnail" value="' . (int) $MG_media[$j]->id . '">';
             $T->set_var('CELL_DISPLAY_IMAGE', $celldisplay);
             $T->parse('IDetail', 'ImageDetail', true);
             $T->parse('IColumn', 'ImageColumn', true);

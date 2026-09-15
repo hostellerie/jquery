@@ -1,8 +1,17 @@
 <script type="text/javascript">
 function InsertHtml(htmltag)
-{	
-	jQuery('#input2',opener.document).val(jQuery('#input2',opener.document).val()+"\n\n"+htmltag+"\n");
-	return false;
+{
+    if (!window.opener || window.opener.closed) {
+        return false;
+    }
+    var field = window.opener.document.getElementById('form-forum-text')
+        || window.opener.document.getElementById('input2');
+    if (!field) {
+        return false;
+    }
+    field.value += "\n\n" + htmltag + "\n";
+    field.dispatchEvent(new Event('input', {bubbles: true}));
+    return false;
 }
 
 function dodisabled(){
@@ -209,4 +218,3 @@ function dodisabled(){
 <input type="button" name="cancel" value="{lang_cancel}" onclick="javascript:window.close();" onkeypress="javascript:window.close();">
 </div>
 </form>
-<script type="text/javascript" src="{real_site_url}/javascript/jquery.min.js"></script>

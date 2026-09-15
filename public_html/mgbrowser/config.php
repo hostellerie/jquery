@@ -28,14 +28,14 @@
 
 
 // Auto Tag defaults - sets default values for MG Media Browser
-$_mgMB_CONF['at_border']          = $_MG_CONF['at_border'];			// 0 = disable border   -- 1 = enable border
-$_mgMB_CONF['at_align']           = $_MG_CONF['at_align'];		// auto, none, right, left
-$_mgMB_CONF['at_width']           = $_MG_CONF['at_width'];			// 0=use default or specify pixels
-$_mgMB_CONF['at_height']          = $_MG_CONF['at_height'];          // 0=use default or specify pixels
-$_mgMB_CONF['at_src']             = $_MG_CONF['at_src'];		// tn, disp, orig
-$_mgMB_CONF['at_autoplay']        = $_MG_CONF['at_autoplay'];			// 0 = disable, 1 = enable
-$_mgMB_CONF['at_enable_link']     = $_MG_CONF['at_enable_link'];			// 0 = disable, 1 = enable
-$_mgMB_CONF['at_delay']           = $_MG_CONF['at_delay'];         // seconds to delay between slides (slideshow / fslideshow)
+$_mgMB_CONF['at_border']          = isset($_MG_CONF['at_border']) ? (int) $_MG_CONF['at_border'] : 0;
+$_mgMB_CONF['at_align']           = isset($_MG_CONF['at_align']) ? $_MG_CONF['at_align'] : 'none';
+$_mgMB_CONF['at_width']           = isset($_MG_CONF['at_width']) ? (int) $_MG_CONF['at_width'] : 0;
+$_mgMB_CONF['at_height']          = isset($_MG_CONF['at_height']) ? (int) $_MG_CONF['at_height'] : 0;
+$_mgMB_CONF['at_src']             = isset($_MG_CONF['at_src']) ? $_MG_CONF['at_src'] : 'tn';
+$_mgMB_CONF['at_autoplay']        = isset($_MG_CONF['at_autoplay']) ? (int) $_MG_CONF['at_autoplay'] : 0;
+$_mgMB_CONF['at_enable_link']     = isset($_MG_CONF['at_enable_link']) ? (int) $_MG_CONF['at_enable_link'] : 0;
+$_mgMB_CONF['at_delay']           = isset($_MG_CONF['at_delay']) ? (int) $_MG_CONF['at_delay'] : 5;
 $_mgMB_CONF['at_alturl']          = 0;          // Use alternate URL for link (if defined with the media item)
 $_mgMB_CONF['enable_dest']        = 1;
 ?>

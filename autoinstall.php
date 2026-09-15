@@ -51,9 +51,9 @@ function plugin_autoinstall_jquery($pi_name)
     $info = array(
         'pi_name'         => $pi_name,
         'pi_display_name' => $pi_display_name,
-        'pi_version'      => '1.4.2',
-        'pi_gl_version'   => '1.8.0',
-        'pi_homepage'     => 'http://geeklog.fr'
+        'pi_version'      => '1.5.0',
+        'pi_gl_version'   => '2.1.1',
+        'pi_homepage'     => 'https://github.com/hostellerie/jquery'
     );
 
     $groups = array(
@@ -95,8 +95,7 @@ function plugin_compatible_with_this_version_jquery($pi_name)
 {
     global $_CONF, $_DB_dbms;
 
-    // Geeklog 1.6.0+
-    if (!function_exists('PLG_pluginStateChange')) {
+    if (!defined('VERSION') || version_compare(VERSION, '2.1.1', '<')) {
         return false;
     }
     return true;

@@ -51,32 +51,12 @@ global $LANG32;
 
 $LANG_JQUERY_1 = array(
     'plugin_name' => 'jQuery',
-    'hello'                 => 'Hello, world!', // this is an example only - feel free to remove
 	'plugin_doc'            => 'Install, upgrade and usage documentation is',
 	'online'                => 'online',
 	'plugin_conf'           => 'The jQuery plugin configuration is now also',
-	'autotag_desc_lightbox' => '<p>[lightbox: url width:x height:y title] - Displays a thumbnail if picture is from this site or on allowed sites: flickr.com, staticflickr.com, picasa.com, img.youtube.com, upload.wikimedia.org, photobucket.com, imgur.com, imageshack.us, tinypic.com. This thumbnail links to the picture displayed in the lightbox.</p><p><strong>Options</strong>: thumbnail width and height where x and y are in pixels. You can also use \'auto\' for x or y. If a title is set, thumbnail is replace by title and you can also set any picture url.</p>',
+	'autotag_desc_lightbox' => '<p>[lightbox: URL width:x height:y title] displays an image thumbnail linked to the full image. Width, height and title are optional.</p>',
 	'add_mg_tag'            => 'Add a media from media gallery',
-);
-
-$LANG_JQUERY_FEEDBACK = array(
-    'feedback'            => ' A Feeback Message ',
-    'name'                => 'Name',
-    'email'               => 'Email',
-    'message'             => 'Message',
-    'contactable'         => 'A contactable message',
-    'thanks'              => 'Thankyou for your message',
-    'message_not_sent'    => 'Sorry but your message could not be sent, try again later',
-    'disclaimer'          => 'Please feel free to get in touch, we value your feedback',
-    'your_feedback'       => 'Your feedback',
-    'success'             => 'Success',
-    'invalid_email'       => 'An invalid email address was entered',
-    'not_abuse'           => 'Thanks to not abuse the system.',
-    'log_in'              => 'Sorry but you must log in to send message.',
-    'from'                => 'From',
-    'reply_to'            => 'Reply to',
-    'send'                => 'Send',
-
+	'open_image'            => 'Open the full image',
 );
 
 // Localization of the Admin Configuration UI
@@ -87,9 +67,6 @@ $LANG_configsections['jquery'] = array(
 
 $LANG_confignames['jquery'] = array(
 	'use_lightbox'        => 'Use lightbox plugin',
-	'use_datepicker'      => 'Use date picker plugin',
-	'use_colorpicker'     => 'Use color picker plugin',
-    'use_feedback'        => 'Use Feedback plugin',
 	'lightbox_width'      => 'Lightbox width in px (without px)',
 	'lightbox_height'     => 'Lightbox height in px (without px)',
 );
@@ -99,8 +76,7 @@ $LANG_configsubgroups['jquery'] = array(
 );
 
 $LANG_fs['jquery'] = array(
-    'fs_02' => 'Plugins',
-    'fs_03' => 'Lightbox'
+    'fs_02' => 'Legacy lightbox'
 );
 
 // Note: entries 0, 1, and 12 are the same as in $LANG_configselects['Core']

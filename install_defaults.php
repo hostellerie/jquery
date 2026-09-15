@@ -50,13 +50,7 @@ if (strpos(strtolower($_SERVER['PHP_SELF']), 'install_defaults.php') !== false) 
 global $_DB_table_prefix, $_JQ_DEFAULT;
 $_JQ_DEFAULT = array();
 
-// Use a content network delivery for jquery library or internal file version
-$_JQ_DEFAULT['use_CND'] = 0;
-$_JQ_DEFAULT['CND_url'] = 'http://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js';
 $_JQ_DEFAULT['use_lightbox'] = 1;
-$_JQ_DEFAULT['use_datepicker'] = 0;
-$_JQ_DEFAULT['use_colorpicker'] = 0;
-$_JQ_DEFAULT['use_feedback'] = 0;
 $_JQ_DEFAULT['lightbox_width'] = 75;
 $_JQ_DEFAULT['lightbox_height'] = 75;
 
@@ -83,16 +77,10 @@ function plugin_initconfig_jquery()
 		$c->add('fs_02', NULL, 'fieldset', 0, 1, NULL, 0, true, 'jquery');
         $c->add('use_lightbox', $_JQ_DEFAULT['use_lightbox'],
                 'select', 0, 1, 3, 30, true, 'jquery');
-        $c->add('use_feedback', $_JQ_DEFAULT['use_feedback'],
-                'select', 0, 1, 3, 60, true, 'jquery');
-
-				
-		//This is fieldset #2  in subgroup #0   
-		$c->add('fs_03', NULL, 'fieldset', 0, 2, NULL, 100, true, 'jquery');
         $c->add('lightbox_width', $_JQ_DEFAULT['lightbox_width'],
-                'text', 0, 2, 0, 110, true, 'jquery');
+                'text', 0, 1, NULL, 40, true, 'jquery');
 		$c->add('lightbox_height', $_JQ_DEFAULT['lightbox_height'],
-                'text', 0, 2, 0, 120, true, 'jquery');
+                'text', 0, 1, NULL, 50, true, 'jquery');
 		}
     return true;
 }
