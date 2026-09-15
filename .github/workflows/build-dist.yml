@@ -1,0 +1,139 @@
+name: Build jQuery installable archive
+
+on:
+  push:
+    branches:
+      - jquery-1.5.0
+    paths-ignore:
+      - 'dist/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jquery-1.5.0-test-archive
+  cancel-in-progress: true
+
+jobs:
+  build-dist:
+    name: Build and commit installable ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Build dist archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          ARCHIVE="jquery_1.5.0_2.1.1.zip"
+
+          rm -rf package
+          mkdir -p package/jquery dist
+          find dist -maxdepth 1 -type f -name 'jquery_*.zip' -delete
+
+          rsync -a ./ package/jquery/ \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='dist/' \
+            --exclude='package/' \
+            --exclude='.idea/' \
+            --exclude='tmp/'
+
+          cat > package/jquery/BUILD_INFO.txt <<EOF
+          jQuery compatibility plugin 1.5.0 test archive
+          Geeklog target: 2.1.1+
+          Source branch: jquery-1.5.0
+          Source commit: ${SOURCE_SHA}
+          EOF
+
+          (
+            cd package
+            zip -qr "../dist/${ARCHIVE}" jquery
+          )
+
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+          echo "SOURCE_SHA=${SOURCE_SHA}" >> "$GITHUB_ENV"
+          sha256sum "dist/${ARCHIVE}"
+
+      - name: Verify installable archive
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          unzip -t "dist/${ARCHIVE}" >/dev/null
+          unzip -Z1 "dist/${ARCHIVE}" | grep -qx 'jquery/functions.inc'
+          unzip -Z1 "dist/${ARCHIVE}" | grep -qx 'jquery/autoinstall.php'
+          unzip -Z1 "dist/${ARCHIVE}" | grep -qx 'jquery/BUILD_INFO.txt'
+          unzip -Z1 "dist/${ARCHIVE}" | grep -qx 'jquery/public_html/mgbrowser/mediagallery.php'
+          unzip -Z1 "dist/${ARCHIVE}" | grep -qx 'jquery/public_html/js/lightbox.js'
+          ! unzip -Z1 "dist/${ARCHIVE}" | grep -q '^jquery/.github/'
+          ! unzip -Z1 "dist/${ARCHIVE}" | grep -q '^jquery/dist/'
+          ! unzip -Z1 "dist/${ARCHIVE}" | grep -q '^jquery/package/'
+          ! unzip -Z1 "dist/${ARCHIVE}" | grep -q 'timthumb'
+          ! unzip -Z1 "dist/${ARCHIVE}" | grep -q 'jquery-migrate'
+
+          python3 - <<'PY'
+          import os
+          import re
+          import sys
+          import zipfile
+
+          archive = os.path.join('dist', os.environ['ARCHIVE'])
+          invalid = []
+
+          with zipfile.ZipFile(archive) as zf:
+              for path in zf.namelist():
+                  name = path.rstrip('/').rsplit('/', 1)[-1]
+                  if not name:
+                      continue
+                  valid = (
+                      not name.startswith('.')
+                      and not name.endswith('.')
+                      and '..' not in name
+                      and re.fullmatch(r'[0-9A-Za-z_.-]+', name) is not None
+                  )
+                  if not valid:
+                      invalid.append(path)
+
+          if invalid:
+              print('Unsafe archive filenames:')
+              for path in invalid:
+                  print(' - ' + path)
+              sys.exit(1)
+          PY
+
+      - name: Skip stale source
+        id: freshness
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin jquery-1.5.0
+          BRANCH_SHA="$(git rev-parse origin/jquery-1.5.0)"
+          if [ "$BRANCH_SHA" != "$SOURCE_SHA" ]; then
+            echo "commit_archive=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "commit_archive=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit archive to jquery-1.5.0
+        if: steps.freshness.outputs.commit_archive == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f dist/
+          if git diff --cached --quiet; then
+            echo 'No dist changes to commit.'
+            exit 0
+          fi
+          git commit -m "Build jquery_1.5.0_2.1.1.zip for ${SOURCE_SHA} [skip ci]"
+          git push origin HEAD:jquery-1.5.0

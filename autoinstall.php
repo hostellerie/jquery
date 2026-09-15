@@ -53,7 +53,7 @@ function plugin_autoinstall_jquery($pi_name)
         'pi_display_name' => $pi_display_name,
         'pi_version'      => '1.5.0',
         'pi_gl_version'   => '2.1.1',
-        'pi_homepage'     => 'https://github.com/hostellerie/jquery'
+        'pi_homepage'     => 'https://github.com/Geeklog-Plugins/jquery'
     );
 
     $groups = array(

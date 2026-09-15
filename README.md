@@ -31,4 +31,10 @@ JavaScript, the generated link still opens the original image.
 
 ## Issues
 
-https://github.com/hostellerie/jquery/issues
+Repository and documentation:
+
+https://github.com/Geeklog-Plugins/jquery
+
+Bug reports and compatibility issues:
+
+https://github.com/Geeklog-Plugins/jquery/issues

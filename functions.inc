@@ -196,7 +196,7 @@ function plugin_chkVersion_jquery()
 
 function plugin_getdocumentationurl_jquery()
 {
-    return 'https://github.com/hostellerie/jquery';
+    return 'https://github.com/Geeklog-Plugins/jquery';
 }
 
 function plugin_upgrade_jquery()
