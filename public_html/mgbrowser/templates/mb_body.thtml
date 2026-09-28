@@ -1,9 +1,0 @@
-<div align="center">
-<!-- BEGIN ImageRow -->
-  <div class="pix">
-<!-- BEGIN ImageColumn -->
-    <div class="cell">{CELL_DISPLAY_IMAGE}</div>
-<!-- END ImageColumn -->
-  </div>
-<!-- END ImageRow -->
-</div>
