@@ -1,7 +1,6 @@
 # jQuery compatibility plugin for Geeklog
 
 This maintenance release preserves the legacy `[lightbox:]` autotag and the
-MediaGallery browser used by Forum 2.9.x. It does not ship or replace jQuery:
 Geeklog already provides and manages that library.
 
 ## Supported environment
@@ -15,7 +14,6 @@ Geeklog already provides and manages that library.
 - removes TimThumb and all server-side fetching or resizing of images;
 - validates and escapes lightbox autotag URLs, labels and dimensions;
 - removes jQuery Migrate, Feedback, Datepicker and ColorPicker;
-- keeps and hardens the MediaGallery browser for the Forum editor;
 - removes obsolete settings during each site's explicit plugin upgrade.
 
 ## Lightbox autotag
@@ -38,3 +36,8 @@ https://github.com/Geeklog-Plugins/jquery
 Bug reports and compatibility issues:
 
 https://github.com/Geeklog-Plugins/jquery/issues
+
+
+## MediaGallery integration
+
+The legacy `mgbrowser` was moved to the MediaGallery plugin. Forum integrations should use MediaGallery's `MG_getMediaPickerButton()` API. This plugin now retains only the legacy `[lightbox:]` compatibility feature and its own administration.
