@@ -3,8 +3,7 @@
 /* Reminder: always indent with 4 spaces (no tabs). */
 
 /**
- * Compatibility plugin for legacy [lightbox:] autotags and the MediaGallery
- * browser used by the Forum editor.
+ * Compatibility plugin for legacy [lightbox:] autotags.
  *
  * Copyright (C) 2010-2026 ::Ben
  * Distributed under the GNU General Public License, version 2 or later.
@@ -27,37 +26,6 @@ if (file_exists($langfile)) {
 require_once $_CONF['path_system'] . 'classes/config.class.php';
 $c = config::get_instance();
 $_JQ_CONF = $c->get_config('jquery');
-
-/**
- * Adds the MediaGallery browser button only where Forum 2.9.x provides the
- * expected editor field. Geeklog remains responsible for loading jQuery.
- */
-function plugin_getheadercode_jquery()
-{
-    global $_CONF, $_PLUGINS, $_SCRIPTS, $LANG_JQUERY_1;
-
-    if (!in_array('mediagallery', $_PLUGINS, true)
-        || !in_array('forum', $_PLUGINS, true)
-        || stripos(COM_getCurrentURL(), '/forum/createtopic.php') === false
-    ) {
-        return;
-    }
-
-    $_SCRIPTS->setJavaScriptLibrary('jquery');
-    $browserUrl = $_CONF['site_url'] . '/jquery/mgbrowser/mediagallery.php';
-    $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
-    $browserUrlJson = json_encode($browserUrl, $jsonFlags);
-    $labelJson = json_encode($LANG_JQUERY_1['add_mg_tag'], $jsonFlags);
-    $script = 'jQuery(function ($) {'
-        . 'var field=$("#form-forum-text");'
-        . 'if(!field.length||$("#mg_browser").length){return;}'
-        . 'var link=$("<a>",{id:"mg_browser",href:' . $browserUrlJson . ',text:' . $labelJson . '});'
-        . 'link.on("click",function(event){event.preventDefault();'
-        . 'window.open(this.href,"mediagallery","width=760,height=720,resizable=yes,scrollbars=yes");});'
-        . 'field.after($("<p>").append(link));'
-        . '});';
-    $_SCRIPTS->setJavaScript($script, true);
-}
 
 function JQUERY_loadLightboxResources()
 {
